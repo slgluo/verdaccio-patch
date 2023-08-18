@@ -3,9 +3,12 @@ package dependency
 import (
 	"encoding/json"
 	"github.com/Masterminds/semver/v3"
+	"github.com/samber/lo"
 	"os"
 	"regexp"
 	"sort"
+	"strings"
+	"time"
 )
 
 type Version struct {
@@ -56,7 +59,7 @@ func GetLocalDistFiles(path string) ([]string, error) {
 	}
 	names := make([]string, 0)
 	for _, file := range files {
-		if file.Name() != "package.json" {
+		if strings.HasSuffix(file.Name(), ".tgz") {
 			names = append(names, file.Name())
 		}
 	}
@@ -84,9 +87,22 @@ func GetSortedDistFiles(dists []string) []string {
 	return dists
 }
 
-func GetSortedVersions(versions []string) []string {
+func GetSortedVersions(versionMap map[string]string) []string {
+	versions := lo.Keys(versionMap)
 	sort.SliceStable(versions, func(i, j int) bool {
-		return semver.MustParse(versions[j]).LessThan(semver.MustParse(versions[i]))
+		preVer, e1 := semver.NewVersion(versions[i])
+		currVer, e2 := semver.NewVersion(versions[j])
+		if e1 != nil || e2 != nil {
+			preTime, e3 := time.Parse(time.RFC3339Nano, versionMap[versions[i]])
+			currTime, e4 := time.Parse(time.RFC3339Nano, versionMap[versions[j]])
+			if e3 != nil || e4 != nil {
+				return true
+			} else {
+				return currTime.Compare(preTime) < 0
+			}
+		} else {
+			return currVer.LessThan(preVer)
+		}
 	})
 	return versions
 }

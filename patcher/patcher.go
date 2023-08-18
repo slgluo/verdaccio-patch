@@ -40,6 +40,10 @@ func AdjustPackage(packagePath string) error {
 		dists []string
 		err   error
 	)
+	// 不是文件夹则忽略
+	if !utils.IsDir(packagePath) {
+		return nil
+	}
 	jsonPath := filepath.Join(packagePath, "package.json")
 	pkg, err = dependency.GetPackage(jsonPath)
 	if err != nil {
@@ -80,7 +84,7 @@ func AdjustPackage(packagePath string) error {
 			newTime[k] = v
 		}
 	}
-	versionsInTime := dependency.GetSortedVersions(lo.Keys(newTime))
+	versionsInTime := dependency.GetSortedVersions(newTime)
 	timeLen := len(versionsInTime)
 	if timeLen > 0 {
 		newTime["created"] = newTime[versionsInTime[timeLen-1]]
@@ -171,6 +175,11 @@ func mergePackageJson(src, dest string) (*dependency.Package, error) {
 }
 
 func PatchPackage(srcPkgPath, targetPkgPath string) error {
+	// 不是文件夹则忽略
+	if !utils.IsDir(srcPkgPath) || !utils.IsDir(targetPkgPath) {
+		return nil
+	}
+
 	var err error
 	if strings.HasPrefix(filepath.Base(srcPkgPath), "@") {
 		subPackages, err := os.ReadDir(srcPkgPath)
